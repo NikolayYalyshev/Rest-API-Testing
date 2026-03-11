@@ -28,6 +28,3 @@
 Если у вас установлен Node.js, выполните:  
 npm install -g newman  
 newman run collections/RestfulBookerTests.postman_collection.json  
-
-### Результаты тестов 
-![тест1](ing/Снимок экрана 2026-03-11 в 23.04.30.png)
