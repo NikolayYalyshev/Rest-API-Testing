@@ -1,0 +1,1440 @@
+{
+	"info": {
+		"_postman_id": "855ffbfb-0485-42b4-b08f-d205c6f77a94",
+		"name": "RestfulBookerTests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44731031",
+		"_collection_link": "https://fdvfvdvdffd.postman.co/workspace/MyTest~73d484cc-c9f6-4877-98d1-b14ae2ec2691/collection/44731031-855ffbfb-0485-42b4-b08f-d205c6f77a94?action=share&source=collection_link&creator=44731031"
+	},
+	"item": [
+		{
+			"name": "HealthCheck",
+			"item": [
+				{
+					"name": "Ping",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"📝 Тело ответа содержит 'Created'\", function () {",
+									"    pm.expect(pm.response.text()).to.equal(\"Created\");",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}\\ping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ping"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"// 1. Определяем лимит (можно вынести в переменные коллекции)",
+							"const responseTimeLimit = 800;",
+							"const actualTime = pm.response.responseTime;",
+							"",
+							"// 2. Формируем статусное сообщение",
+							"let perfStatus = actualTime <= responseTimeLimit ",
+							"    ? `✅ Быстрый ответ: ${actualTime}мс` ",
+							"    : `⚠️ Задержка: ${actualTime}мс (превышение на ${actualTime - responseTimeLimit}мс)`;",
+							"",
+							"// 3. Запускаем тест с динамическим названием",
+							"pm.test(`⚡ Производительность: ${perfStatus}`, function () {",
+							"    if (actualTime > responseTimeLimit) {",
+							"        // Если время превышено, тест проходит, но выводит предупреждение в лог",
+							"        // Либо можно уронить тест через pm.expect.fail(), если это критично",
+							"        console.warn(`[Performance Alert]: Сервер отвечает медленнее ${responseTimeLimit}мс`);",
+							"    }",
+							"    ",
+							"    pm.expect(actualTime, `Время ответа ${actualTime}мс выше нормы в ${responseTimeLimit}мс`)",
+							"      .to.be.below(responseTimeLimit + 1); // +1 для корректного сравнения порогов",
+							"});",
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "CreateToken",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 1. Парсим тело ответа в JSON",
+									"const responseData = pm.response.json();",
+									"",
+									"// 2. Достаем токен",
+									"const myToken = responseData.token;",
+									"",
+									"// 3. Сохраняем токен в переменную коллекции",
+									"pm.collectionVariables.set(\"auth_token\", myToken);",
+									"",
+									"// Бонус: проверка, что токен пришел",
+									"pm.test(\"Токен успешно получен\", function () {",
+									"    pm.expect(myToken).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\" : \"admin\",\n    \"password\" : \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "GetBookingIds",
+			"item": [
+				{
+					"name": "AllBookers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"  const jsonData = pm.response.json();",
+									"",
+									"// Проверка на корректность отображения данных ресурсов",
+									"pm.test(\"Каждый объект в массиве содержит ID\", function () {",
+									"    jsonData.forEach((booking, index) => {",
+									"        pm.expect(booking, `Объект под индексом ${index} не имеет поля bookingid`).to.have.property(\"bookingid\");",
+									"        pm.expect(booking.bookingid, `ID в объекте ${index} не найден`).to.be.a(\"number\");",
+									"    });",
+									"});",
+									"",
+									"// Проверка дублирования объектов",
+									"pm.test(\"В списке нет дубликатов\", function () {",
+									"    const ids = jsonData.map(item => item.bookingid);",
+									"    const uniqueIds = new Set(ids);",
+									"    ",
+									"    pm.expect(ids.length).to.equal(uniqueIds.size);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "FilterByName",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"const isNotEmpty = jsonData.length > 0;",
+									"",
+									"//Динамический текст результата теста",
+									"let testName;",
+									"if (isNotEmpty) {",
+									"    const firstId = jsonData[0].bookingid; ",
+									"    testName = `✅ Успешно: Найдено ${jsonData.length} записей. ID: ${firstId}`;",
+									"} else {",
+									"    testName = \"❌ Массив пуст, данные по фильтру не найдены\";",
+									"}",
+									"",
+									"//Проверка что в результате запроса получили ресурс",
+									"pm.test(testName, function () {",
+									"    ",
+									"    // Проверяем, что в первом объекте поле bookingid — это число (опционально)",
+									"    if (isNotEmpty) {",
+									"        pm.expect(jsonData[0]).to.have.property(\"bookingid\");",
+									"        pm.expect(jsonData[0].bookingid).to.be.a('number');",
+									"    } else {",
+									"        pm.expect.fail(\"Данные не найдены или неверно указаны параметры запроса\");",
+									"    }",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}?firstname=sally&lastname=brown",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "sally"
+								},
+								{
+									"key": "lastname",
+									"value": "brown"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "FilterByCheckin\\out",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Проверяем что прислал сервер ",
+									"let jsonData;",
+									"try {",
+									"    jsonData = pm.response.json();",
+									"} catch (e) {",
+									"    jsonData = null; // возможно ошибка 500",
+									"}",
+									"",
+									"const isNotEmpty = jsonData && Array.isArray(jsonData) && jsonData.length > 0;",
+									"",
+									"const rawCheckin = pm.request.url.query.get(\"checkin\");",
+									"const rawCheckout = pm.request.url.query.get(\"checkout\");",
+									"",
+									"// Динамический текст теста относительно наличия данных в ответе",
+									"let testName = isNotEmpty ",
+									"    ? `✅ Найдено ${jsonData.length} объектов (${rawCheckin} — ${rawCheckout})`",
+									"    : `❌ Данные не найдены или ошибка сервера`;",
+									"",
+									"// Основной тест со сложной логикой фильтрации дат",
+									"pm.test(testName, function () {",
+									"    // Если jsonData пустой (из-за 500 ошибки)",
+									"    pm.expect(jsonData, \"Сервер не вернул валидный JSON. Проверьте формат дат (нужен YYYY-MM-DD)\").to.not.be.null;",
+									"    ",
+									"    if (isNotEmpty) {",
+									"        pm.expect(jsonData[0]).to.have.property(\"bookingid\");",
+									"    } else {",
+									"        pm.expect.fail(\"Массив пуст или параметры запроса неверны\");",
+									"    }",
+									"});",
+									"",
+									"if (!rawCheckin || !rawCheckout) {",
+									"    pm.test(\"❌ Ошибка: Проверьте вкладку Params (checkin/checkout)\", function () {",
+									"        pm.expect.fail(\"Один из параметров даты пуст или не найден\");",
+									"    });",
+									"} else if (isNotEmpty) {",
+									"    ",
+									"    const firstId = jsonData[0].bookingid; ",
+									"    const url = `https://restful-booker.herokuapp.com/booking/${firstId}`;",
+									"",
+									"    pm.sendRequest(url, function (err, res) {",
+									"        if (err || res.code !== 200) return;",
+									"",
+									"        const details = res.json();",
+									"        ",
+									"        // Переводим в объекты дат для сравнения",
+									"        const dActualCheckin = new Date(details.bookingdates.checkin);",
+									"        const dActualCheckout = new Date(details.bookingdates.checkout);",
+									"        const dExpectedCheckin = new Date(rawCheckin);",
+									"        const dExpectedCheckout = new Date(rawCheckout);",
+									"",
+									"        pm.test(`Проверка ID ${firstId}: даты входят в диапазон`, function () {",
+									"            // Проверяем, что даты корректные ",
+									"            pm.expect(dActualCheckin.toString(), \"Дата заезда в БД некорректна\").to.not.equal(\"Invalid Date\");",
+									"            pm.expect(dExpectedCheckout.toString(), \"Дата checkout в параметрах некорректна\").to.not.equal(\"Invalid Date\");",
+									"",
+									"            // Сравнение даты заезда ",
+									"            pm.expect(dActualCheckin, `Заезд в базе (${details.bookingdates.checkin}) должен быть не раньше ${rawCheckin}`)",
+									"                .to.be.at.least(dExpectedCheckin);",
+									"            ",
+									"            // Сравнение даты выезда ",
+									"            pm.expect(dActualCheckout, `Выезд в базе (${details.bookingdates.checkout}) должен быть не позже ${rawCheckout}`)",
+									"                .to.be.at.most(dExpectedCheckout);",
+									"        });",
+									"    });",
+									"} else {",
+									"    // Если ни одно из условий не сработало",
+									"    console.log(\"Массив пуст, детальная проверка ID пропущена.\"); ",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}?checkin=2014-03-13&checkout=2014-05-21",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}"
+							],
+							"query": [
+								{
+									"key": "checkin",
+									"value": "2014-03-13"
+								},
+								{
+									"key": "checkout",
+									"value": "2014-05-21"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"const schema = {",
+							"  \"type\": \"array\",",
+							"  \"items\": {",
+							"    \"type\": \"object\",",
+							"    \"required\": [\"bookingid\"],",
+							"    \"properties\": {",
+							"      \"bookingid\": { ",
+							"        \"type\": \"number\",",
+							"        \"minimum\": 1",
+							"      }",
+							"    },",
+							"    \"additionalProperties\": false",
+							"  }",
+							"};",
+							"",
+							"pm.test(\"Список ID соответствует JSON-схеме\", function () {",
+							"    pm.response.to.have.jsonSchema(schema);",
+							"});",
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "CreateBooking",
+			"item": [
+				{
+					"name": "CreateBooking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"const xml2js = require('xml2js'); ",
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    const requestContentType = pm.request.headers.get(\"Content-Type\") || \"\";",
+									"    ",
+									"    const formatLabel = requestContentType.includes(\"xml\") ? \"XML\" : \"JSON\";",
+									"// Тест проверки совпадения данных в запросе и ответе",
+									"    pm.test(`✅ Данные в ответе совпадают с отправленными в формате ${formatLabel}`, function () {",
+									"        if (formatLabel === \"XML\") {",
+									"            xml2js.parseString(pm.request.body.raw, (err, result) => {",
+									"                if (err) { pm.expect.fail(\"Ошибка чтения XML из запроса: \" + err); }",
+									"                ",
+									"                const b = result.booking;",
+									"                pm.expect(jsonData.booking.firstname).to.equal(b.firstname[0]);",
+									"                pm.expect(jsonData.booking.lastname).to.equal(b.lastname[0]);",
+									"                pm.expect(jsonData.booking.totalprice.toString()).to.equal(b.totalprice[0]);",
+									"                pm.expect(jsonData.booking.depositpaid.toString()).to.equal(b.depositpaid[0]);",
+									"                pm.expect(jsonData.booking.bookingdates.checkin).to.equal(b.bookingdates[0].checkin[0]);",
+									"                pm.expect(jsonData.booking.bookingdates.checkout).to.equal(b.bookingdates[0].checkout[0]);",
+									"            });",
+									"        } else {",
+									"            const sentData = JSON.parse(pm.request.body.raw);",
+									"            ",
+									"            pm.expect(jsonData.booking.firstname).to.equal(sentData.firstname);",
+									"            pm.expect(jsonData.booking.lastname).to.equal(sentData.lastname);",
+									"            pm.expect(jsonData.booking.totalprice).to.equal(sentData.totalprice);",
+									"            pm.expect(jsonData.booking.depositpaid).to.equal(sentData.depositpaid);",
+									"            pm.expect(jsonData.booking.bookingdates.checkin).to.equal(sentData.bookingdates.checkin);",
+									"            pm.expect(jsonData.booking.bookingdates.checkout).to.equal(sentData.bookingdates.checkout);",
+									"        }",
+									"    });",
+									"",
+									"// Сохраняем ID для цепочки тестов",
+									"if (jsonData.bookingid) {",
+									"    pm.collectionVariables.set(\"last_booking_id\", jsonData.bookingid);",
+									"    console.log(\"Сохранен ID созданного бронирования:\", jsonData.bookingid);",
+									"}",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"content-type": true,
+							"accept": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<booking>\n    <firstname>Jim</firstname>\n    <lastname>Brown</lastname>\n    <totalprice>112</totalprice>\n    <depositpaid>true</depositpaid>\n    <bookingdates>\n      <checkin>2018-01-01</checkin>\n      <checkout>2019-01-01</checkout>\n    </bookingdates>\n    <additionalneeds>Breakfast</additionalneeds>\n  </booking>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"",
+							"const xml2js = require('xml2js'); ",
+							"",
+							"const postSchema = {",
+							"    \"type\": \"object\",",
+							"    \"required\": [\"bookingid\", \"booking\"],",
+							"    \"properties\": {",
+							"        \"bookingid\": { \"type\": \"number\" },",
+							"        \"booking\": {",
+							"            \"type\": \"object\",",
+							"            \"required\": [\"firstname\", \"lastname\", \"totalprice\", \"depositpaid\", \"bookingdates\"],",
+							"            \"properties\": {",
+							"                \"firstname\": { \"type\": \"string\" },",
+							"                \"lastname\": { \"type\": \"string\" },",
+							"                \"totalprice\": { \"type\": \"number\" },",
+							"                \"depositpaid\": { \"type\": \"boolean\" },",
+							"                \"bookingdates\": {",
+							"                    \"type\": \"object\",",
+							"                    \"required\": [\"checkin\", \"checkout\"]",
+							"                },",
+							"                \"additionalneeds\": { \"type\": \"string\" }",
+							"            }",
+							"        }",
+							"    }",
+							"};",
+							"",
+							"// Подготовка данных",
+							"const requestContentType = pm.request.headers.get(\"Content-Type\") || \"\";",
+							"const responseContentType = pm.response.headers.get(\"Content-Type\") || \"\";",
+							"const statusCode = pm.response.code;",
+							"",
+							"//Определение форматов",
+							"const isXmlReq = requestContentType.includes(\"xml\");",
+							"const isJsonReq = requestContentType.includes(\"json\");",
+							"let requestLabel = isXmlReq ? \"XML\" : (isJsonReq ? \"JSON\" : \"Неизвестно\");",
+							"// Информационный тест, какие данные мы отправили",
+							"pm.test(`📤 Структура запроса: ${requestLabel}`, function () {",
+							"    pm.expect(isXmlReq || isJsonReq, \"Запрос должен быть JSON или XML\").to.be.true;",
+							"});",
+							"",
+							"// Тест проверки ответа",
+							"if (statusCode === 200) {",
+							"    // Проверка JSON-ответа",
+							"    if (responseContentType.includes(\"application/json\")) {",
+							"        pm.test(\"✅ Структура ответа соответствует JSON-схеме\", function () {",
+							"            pm.response.to.have.jsonSchema(postSchema);",
+							"        });",
+							"    } ",
+							"    // Проверка XML-ответа",
+							"    else if (responseContentType.includes(\"xml\")) {",
+							"        pm.test(\"✅ Структура ответа соответствует XML-схеме\", function () {",
+							"            xml2js.parseString(pm.response.text(), (err, result) => {",
+							"                if (err) { pm.expect.fail(\"Ошибка парсинга XML: \" + err); }",
+							"",
+							"                pm.expect(result).to.have.property(\"booking\");",
+							"                const b = result.booking;",
+							"                ",
+							"                pm.expect(b).to.have.property(\"bookingid\");",
+							"                pm.expect(b).to.have.property(\"booking\");",
+							"                ",
+							"                // ВАЖНО: xml2js создает массивы, берем индекс [0]",
+							"                const details = b.booking[0];",
+							"                pm.expect(details).to.have.all.keys(",
+							"                    \"firstname\", \"lastname\", \"totalprice\", ",
+							"                    \"depositpaid\", \"bookingdates\", \"additionalneeds\"",
+							"                );",
+							"            });",
+							"        });",
+							"    }",
+							"} ",
+							"// Обработка ошибок",
+							"else {",
+							"    let errorMessage = `❌ Ошибка сервера: ${statusCode} (${pm.response.status})`;",
+							"    pm.test(errorMessage, function () {",
+							"        let detail = \"Данные не получены. \";",
+							"        if (statusCode === 404) detail += \"Объект не найден.\";",
+							"        if (statusCode === 418) detail += \"I'm a teapot (Сервер не принял этот формат).\";",
+							"        if (statusCode === 500) detail += \"Внутренняя ошибка сервера.\";",
+							"        pm.expect.fail(`${detail} Тело: ${pm.response.text()}`);",
+							"    });",
+							"}",
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "GetBooking",
+			"item": [
+				{
+					"name": "BookingById",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const isFound = pm.response.code === 200;",
+									"",
+									"if (isFound) {",
+									"    const jsonData = pm.response.json();",
+									" // Проверяем что даты корректно сохранены ",
+									"pm.test(\"Проверка логики дат: выезд не раньше заезда\", function () {",
+									"    const checkin = new Date(jsonData.bookingdates.checkin);",
+									"    const checkout = new Date(jsonData.bookingdates.checkout);",
+									"    pm.expect(checkout).to.be.at.least(checkin);",
+									"});",
+									"} else {",
+									" // Обратный тест   ",
+									"    pm.test(\"Объект не найден на сервере\", function () {",
+									"        pm.expect.fail(`Запрос вернул ${pm.response.code}. Проверьте ID или создайте новый объект.`);",
+									"    });",
+									"}",
+									"",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}/{{last_booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}",
+								"{{last_booking_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"const isSuccess = pm.response.code === 200;",
+							"",
+							"// Схема для валидации",
+							"if (isSuccess) {",
+							"const schema = {",
+							"    \"type\": \"object\",",
+							"    \"required\": [\"firstname\", \"lastname\", \"totalprice\", \"depositpaid\", \"bookingdates\"],",
+							"    \"properties\": {",
+							"        \"firstname\": { \"type\": \"string\" },",
+							"        \"lastname\": { \"type\": \"string\" },",
+							"        \"totalprice\": { \"type\": \"number\" },",
+							"        \"depositpaid\": { \"type\": \"boolean\" },",
+							"        \"bookingdates\": {",
+							"            \"type\": \"object\",",
+							"            \"required\": [\"checkin\", \"checkout\"],",
+							"            \"properties\": {",
+							"                \"checkin\": { \"type\": \"string\", \"pattern\": \"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\" },",
+							"                \"checkout\": { \"type\": \"string\", \"pattern\": \"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\" }",
+							"            }",
+							"        },",
+							"        \"additionalneeds\": { \"type\": \"string\" }",
+							"    }",
+							"};",
+							"",
+							"// Тест проверки соответвия схеме",
+							"pm.test(\"✅ Ответ полностью соответствует JSON-схеме\", function () {",
+							"    pm.response.to.have.jsonSchema(schema);",
+							"});",
+							"} else {",
+							"    pm.test(`❌ Объект не найден (${pm.response.code})`, function () {",
+							"    pm.expect(pm.response.code).to.equal(404);",
+							"});",
+							"}"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "UpdateBooking",
+			"item": [
+				{
+					"name": "UpdateAllBootingById",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"function parseData(content, contentType = \"\") {",
+									"    if (!content || content.trim() === \"\") return {};",
+									"    ",
+									"",
+									"    if (content.trim().startsWith('<') || contentType.includes(\"xml\")) {",
+									"        try {",
+									"            const jsonObject = xml2Json(content);",
+									"            return jsonObject.booking || jsonObject;",
+									"        } catch (e) {",
+									"            return { error: \"XML Parsing Error\" };",
+									"        }",
+									"    }",
+									"    ",
+									"    try {",
+									"        return JSON.parse(content);",
+									"    } catch (e) {",
+									"        return { error: \"Not a valid JSON\" };",
+									"    }",
+									"}",
+									"",
+									"const requestData = parseData(pm.request.body.raw);",
+									"const responseData = parseData(pm.response.text(), pm.response.headers.get(\"Content-Type\"));",
+									"",
+									"// Тест сравнения, что ресурс изменился",
+									"pm.test(`🔄 Ресурс ID=${pm.variables.get(\"last_booking_id\")} изменен корректно`, function () {",
+									"    let results = [];",
+									"    let isMatch = true;",
+									"",
+									"    function compare(path, reqVal, resVal) {",
+									"        if (typeof reqVal === 'object' && reqVal !== null && resVal !== null) {",
+									"            for (let key in reqVal) {",
+									"                compare(`${path}.${key}`, reqVal[key], resVal[key]);",
+									"            }",
+									"        } else {",
+									"            const cleanReq = String(reqVal).trim();",
+									"            const cleanRes = String(resVal).trim();",
+									"",
+									"            if (cleanReq === cleanRes) {",
+									"                results.push(`${path}: ✅`);",
+									"            } else {",
+									"                results.push(`${path}: ❌ (${cleanReq} != ${cleanRes})`);",
+									"                isMatch = false;",
+									"            }",
+									"        }",
+									"    }",
+									"",
+									"    // Запускаем сравнение",
+									"    compare(\"booking\", requestData, responseData);",
+									"",
+									"    const report = results.join(\" | \");",
+									"    pm.expect(isMatch, report).to.be.true;",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"content-type": true,
+							"accept": true
+						}
+					},
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml"
+							},
+							{
+								"key": "Accept",
+								"value": "application/xml"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic YWRtaW46cGFzc3dvcmQxMjM="
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<booking>\n    <firstname>James</firstname>\n    <lastname>Brown</lastname>\n    <totalprice>110</totalprice>\n    <depositpaid>true</depositpaid>\n    <bookingdates>\n      <checkin>2018-01-01</checkin>\n      <checkout>2019-01-01</checkout>\n    </bookingdates>\n    <additionalneeds>Breakfast</additionalneeds>\n  </booking>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}/{{last_booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}",
+								"{{last_booking_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"const xml2js = require('xml2js'); ",
+							"",
+							"// Схема валидации JSON",
+							"const putSchema = {",
+							"    \"type\": \"object\",",
+							"    \"required\": [\"firstname\", \"lastname\", \"totalprice\", \"depositpaid\", \"bookingdates\"],",
+							"    \"properties\": {",
+							"        \"firstname\": { \"type\": \"string\" },",
+							"        \"lastname\": { \"type\": \"string\" },",
+							"        \"totalprice\": { \"type\": \"number\" },",
+							"        \"depositpaid\": { \"type\": \"boolean\" },",
+							"        \"bookingdates\": {",
+							"            \"type\": \"object\",",
+							"            \"required\": [\"checkin\", \"checkout\"],",
+							"            \"properties\": {",
+							"                \"checkin\": { \"type\": \"string\" },",
+							"                \"checkout\": { \"type\": \"string\" }",
+							"            }",
+							"        },",
+							"        \"additionalneeds\": { \"type\": \"string\" }",
+							"    }",
+							"};",
+							"",
+							"const requestContentType = pm.request.headers.get(\"Content-Type\") || \"\";",
+							"const responseContentType = pm.response.headers.get(\"Content-Type\") || \"\";",
+							"const statusCode = pm.response.code;",
+							"",
+							"// Информационный тест о типе запроса",
+							"const isXmlReq = requestContentType.includes(\"xml\");",
+							"const isJsonReq = requestContentType.includes(\"json\");",
+							"let requestLabel = isXmlReq ? \"XML\" : (isJsonReq ? \"JSON\" : \"Неизвестно\");",
+							"",
+							"pm.test(`📤 Структура запроса: ${requestLabel}`, function () {",
+							"    pm.expect(isXmlReq || isJsonReq, \"Запрос должен быть JSON или XML\").to.be.true;",
+							"});",
+							"",
+							"// Логика проверки ответа",
+							"if (statusCode === 200) {",
+							"   ",
+							"    if (responseContentType.includes(\"application/json\")) {",
+							"         // Проверка JSON-ответа",
+							"        pm.test(\"✅ [PUT] Структура ответа соответствует JSON-схеме\", function () {",
+							"            pm.response.to.have.jsonSchema(putSchema);",
+							"        });",
+							"    } ",
+							"",
+							"    else if (responseContentType.includes(\"xml\")) {",
+							"        // Проверка XML-ответа",
+							"    pm.test(\"✅ [PUT] Структура ответа соответствует XML-схеме\", function () {",
+							"        const { XMLParser } = require('fast-xml-parser');",
+							"        const parser = new XMLParser();",
+							"        const details = parser.parse(pm.response.text()).booking;",
+							"        // Лаконичная проверка всех ключей сразу",
+							"        pm.expect(details).to.have.all.keys(",
+							"            \"firstname\", \"lastname\", \"totalprice\", ",
+							"            \"depositpaid\", \"bookingdates\", \"additionalneeds\"",
+							"        );",
+							"    });",
+							"    }",
+							" else if (responseContentType.includes(\"html\")) {",
+							"        // Если пришёл иной формат",
+							"        pm.test(\"⚠️ [PUT] Данные обновлены (но ответ в формате HTML)\", function () {",
+							"            const body = pm.response.text().toLowerCase();",
+							"            pm.expect(body).to.not.include(\"forbidden\");",
+							"            pm.expect(body).to.not.include(\"internal server error\");",
+							"        });",
+							"    }",
+							"",
+							"}",
+							"// Обработка ошибок",
+							"else {",
+							"    let errorMessage = `❌ Ошибка сервера: ${statusCode} (${pm.response.status})`;",
+							"    pm.test(errorMessage, function () {",
+							"        let detail = \"Данные не получены. \";",
+							"        if (statusCode === 405) detail += \"🚫 Method Not Allowed: API не поддерживает XML для метода PUT.\";",
+							"        if (statusCode === 403) detail += \"🔐 Forbidden: Проверьте Cookie: token или права доступа.\";",
+							"        if (statusCode === 404) detail += \"🔍 Объект не найден (проверьте ID в URL).\";",
+							"        if (statusCode === 418) detail += \"🍵 I'm a teapot: Сервер отклонил XML-формат.\";",
+							"        if (statusCode === 500) detail += \"💥 Внутренняя ошибка сервера.\";",
+							"        pm.expect.fail(`${detail} Тело: ${pm.response.text()}`);",
+							"    });",
+							"}",
+							"",
+							"",
+							"const cookieHeader = pm.request.headers.get(\"Cookie\");",
+							"const authHeader = pm.request.headers.get(\"Authorization\");",
+							"",
+							"// Обычные текстовые метки для отчета",
+							"let foundInfo = [];",
+							"if (cookieHeader) foundInfo.push(\"Cookie ✅\");",
+							"if (authHeader) foundInfo.push(\"Authorization ✅\");",
+							"",
+							"// Формируем название теста динамически",
+							"let testName = \"🛡️ Проверка безопасности: \";",
+							"if (foundInfo.length > 0) {",
+							"    testName += `Заголовок авторизации корректен (${foundInfo.join(\" и \")})`;",
+							"} else {",
+							"    testName += \"Заголовки авторизации ОТСУТСТВУЮТ\";",
+							"}",
+							"",
+							"// Тест проверки, что заголовок авторизации использовался в запросе",
+							"pm.test(testName, function () {",
+							"    const isPresent = (cookieHeader !== undefined && cookieHeader !== \"\") || ",
+							"                      (authHeader !== undefined && authHeader !== \"\");",
+							"",
+							"    if (!isPresent) {",
+							"        const errorDetail = \"Запрос отправлен без Cookie или Authorization. \" + ",
+							"                            \"Согласно требованиям безопасности, сервер ДОЛЖЕН вернуть 403 Forbidden.\";",
+							"        pm.expect.fail(errorDetail);",
+							"    } else {",
+							"        // Если заголовок есть, тест просто проходит (Passed)",
+							"        pm.expect(true).to.be.true;",
+							"    }",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "PatchBooking",
+			"item": [
+				{
+					"name": "ChangeBookingById",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Универсальный парсинг JSON/XML",
+									"function parseData(data) {",
+									"    if (!data) return {};",
+									"    const trimmed = data.trim();",
+									"    if (trimmed.startsWith('<')) {",
+									"        try { ",
+									"            const json = xml2Json(trimmed);",
+									"            return json.booking || json; ",
+									"        } catch(e) { return {}; }",
+									"    }",
+									"    try { return JSON.parse(trimmed); } catch(e) { return {}; }",
+									"}",
+									"",
+									"const requestData = parseData(pm.request.body.raw);",
+									"const responseData = parseData(pm.response.text());",
+									"const bookingId = pm.variables.get(\"last_booking_id\") || \"N/A\";",
+									"",
+									"// Тест проверки, что ресурс изменился",
+									"pm.test(`📝 Ресурс ID=${bookingId} обновлен корректно`, function () {",
+									"    let report = [];",
+									"    let isSuccess = true;",
+									"",
+									"    // Рекурсивная функция сравнения",
+									"    function analyze(path, reqVal, resVal) {",
+									"        if (typeof reqVal === 'object' && reqVal !== null && resVal !== null) {",
+									"            for (let key in reqVal) {",
+									"                analyze(`${path}.${key}`, reqVal[key], resVal[key]);",
+									"            }",
+									"        } else {",
+									"            const sReq = String(reqVal).trim();",
+									"            const sRes = String(resVal || \"отсутствует\").trim();",
+									"",
+									"            if (sReq === sRes) {",
+									"                // Если данные совпали — выводим подтверждение",
+									"                report.push(`${path}: ✅ [${sRes}]`);",
+									"            } else {",
+									"                // Если сервер вернул не то, что мы просили в PATCH",
+									"                report.push(`${path}: ❌ (Ждали \"${sReq}\", получили \"${sRes}\")`);",
+									"                isSuccess = false;",
+									"            }",
+									"        }",
+									"    }",
+									"    // Запускаем анализ только по тем полям, которые были в PATCH-запросе",
+									"    analyze(\"booking\", requestData, responseData);",
+									"    const finalLog = report.join(\" | \");",
+									"    pm.expect(isSuccess, finalLog).to.be.true;",
+									"});",
+									"",
+									"",
+									"const checkMethod = pm.request.method;",
+									"let parsedBody = {};",
+									"",
+									"try {",
+									"    const rawContent = pm.request.body.raw || \"\";",
+									"    if (rawContent.trim().startsWith('<')) {",
+									"        const xmlData = xml2Json(rawContent);",
+									"        parsedBody = xmlData.booking || xmlData;",
+									"    } else if (rawContent.trim() !== \"\") {",
+									"        parsedBody = JSON.parse(rawContent);",
+									"    }",
+									"} catch (e) {",
+									"    console.warn(\"Не удалось распарсить тело для проверки метода:\", e);",
+									"}",
+									"",
+									"// 2. Список обязательных полей для полной брони (стандарт для PUT)",
+									"const requiredForPut = [\"firstname\", \"lastname\", \"totalprice\", \"depositpaid\", \"bookingdates\"];",
+									"const keysInRequest = Object.keys(parsedBody);",
+									"const absentFields = requiredForPut.filter(field => !keysInRequest.includes(field));",
+									"",
+									"//Тест провекри соответствия Метода и Тела запроса",
+									"pm.test(`🛠️ Валидация метода: ${checkMethod}`, function () {",
+									"    ",
+									"    // Если метод PUT, но полей не хватает",
+									"    if (checkMethod === \"PUT\" && absentFields.length > 0) {",
+									"        const errorMsg = `Для метода PUT не хватает полей: [${absentFields.join(\", \")}]. ` +",
+									"                         `Согласно REST, для частичного обновления (только имя/фамилия) используйте PATCH.`;",
+									"        pm.expect.fail(errorMsg);",
+									"    } ",
+									"    ",
+									"    // Если метод PATCH, но мы отправили всё",
+									"    else if (checkMethod === \"PATCH\" && absentFields.length === 0) {",
+									"        console.info(\"Info: Отправлен полный объект через PATCH. Это допустимо.\");",
+									"        pm.expect(true).to.be.true;",
+									"    } ",
+									"    ",
+									"    else {",
+									"        // Все корректно (либо полный PUT, либо частичный PATCH)",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml"
+							},
+							{
+								"key": "Accept",
+								"value": "application/xml"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "<booking>\n    <firstname>Jamesons</firstname>\n    <lastname>Brown</lastname>\n</booking>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}/{{last_booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}",
+								"{{last_booking_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"// Схема валидации (с необязательными полями)",
+							"const patchSchema = {",
+							"    \"type\": \"object\",",
+							"    \"properties\": {",
+							"        \"firstname\": { \"type\": \"string\" },",
+							"        \"lastname\": { \"type\": \"string\" },",
+							"        \"totalprice\": { \"type\": \"number\" },",
+							"        \"depositpaid\": { \"type\": \"boolean\" },",
+							"        \"bookingdates\": {",
+							"            \"type\": \"object\",",
+							"            \"properties\": {",
+							"                \"checkin\": { \"type\": \"string\", \"format\": \"date\" },",
+							"                \"checkout\": { \"type\": \"string\", \"format\": \"date\" }",
+							"            }",
+							"        },",
+							"        \"additionalneeds\": { \"type\": \"string\" }",
+							"    }",
+							"};",
+							"",
+							"const requestContentType = pm.request.headers.get(\"Content-Type\") || \"\";",
+							"const responseContentType = pm.response.headers.get(\"Content-Type\") || \"\";",
+							"const statusCode = pm.response.code;",
+							"",
+							"// Тест? проверяющий тип запроса",
+							"const isXmlReq = requestContentType.includes(\"xml\");",
+							"const isJsonReq = requestContentType.includes(\"json\");",
+							"let requestLabel = isXmlReq ? \"XML\" : (isJsonReq ? \"JSON\" : \"Неизвестно\");",
+							"",
+							"pm.test(`📤 Структура запроса: ${requestLabel}`, function () {",
+							"    pm.expect(isXmlReq || isJsonReq, \"Запрос должен быть JSON или XML\").to.be.true;",
+							"});",
+							"",
+							"// Тест проверки ответа",
+							"if (statusCode === 200) {",
+							"    // Проверка JSON-ответа",
+							"    if (responseContentType.includes(\"application/json\")) {",
+							"        pm.test(\"✅ [PATCH] Структура ответа соответствует JSON-схеме\", function () {",
+							"            pm.response.to.have.jsonSchema(patchSchema);",
+							"        });",
+							"    } ",
+							"    // Проверка XML-ответа",
+							"    else if (responseContentType.includes(\"xml\")) {",
+							"        pm.test(\"✅ [PATCH] Структура ответа соответствует XML-схеме\", function () {",
+							"            const { XMLParser } = require('fast-xml-parser');",
+							"            const parser = new XMLParser();",
+							"            const jsonObj = parser.parse(pm.response.text());",
+							"            const details = jsonObj.booking || jsonObj;",
+							"",
+							"            pm.expect(details, \"Объект бронирования не найден\").to.exist;",
+							"            pm.expect(details).to.have.any.keys(\"firstname\", \"lastname\");",
+							"        });",
+							"    }",
+							"    // Обработка HTML (если ошибки в обработке сервера)",
+							"    else if (responseContentType.includes(\"html\")) {",
+							"        pm.test(\"⚠️ [PATCH] Данные обновлены (но ответ в формате HTML)\", function () {",
+							"            const body = pm.response.text().toLowerCase();",
+							"            pm.expect(body).to.not.include(\"forbidden\");",
+							"            pm.expect(body).to.not.include(\"internal server error\");",
+							"        });",
+							"    }",
+							"} ",
+							"// Обработка ошибок",
+							"else {",
+							"    let errorMessage = `❌ Ошибка сервера: ${statusCode} (${pm.response.status})`;",
+							"    pm.test(errorMessage, function () {",
+							"        let detail = \"Данные не получены. \";",
+							"        if (statusCode === 405) detail += \"🚫 Method Not Allowed: Проверьте метод (PATCH).\";",
+							"        if (statusCode === 403) detail += \"🔐 Forbidden: Обновите токен в Cookie.\";",
+							"        if (statusCode === 404) detail += \"🔍 Объект не найден.\";",
+							"        pm.expect.fail(`${detail} Тело: ${pm.response.text()}`);",
+							"    });",
+							"}",
+							"",
+							"",
+							"const cookieHeader = pm.request.headers.get(\"Cookie\");",
+							"const authHeader = pm.request.headers.get(\"Authorization\");",
+							"",
+							"let foundInfo = [];",
+							"if (cookieHeader) foundInfo.push(\"Cookie ✅\");",
+							"if (authHeader) foundInfo.push(\"Authorization ✅\");",
+							"",
+							"// Формируем название теста динамически",
+							"let testName = \"🛡️ Проверка безопасности: \";",
+							"if (foundInfo.length > 0) {",
+							"    testName += `Заголовок авторизации корректен (${foundInfo.join(\" и \")})`;",
+							"} else {",
+							"    testName += \"Заголовки авторизации ОТСУТСТВУЮТ\";",
+							"}",
+							"",
+							"// Тест проверки, что заголовок авторизации использовался в запросе",
+							"pm.test(testName, function () {",
+							"    const isPresent = (cookieHeader !== undefined && cookieHeader !== \"\") || ",
+							"                      (authHeader !== undefined && authHeader !== \"\");",
+							"",
+							"    if (!isPresent) {",
+							"        const errorDetail = \"Запрос отправлен без Cookie или Authorization. \" + ",
+							"                            \"Согласно требованиям безопасности, сервер ДОЛЖЕН вернуть 403 Forbidden.\";",
+							"        pm.expect.fail(errorDetail);",
+							"    } else {",
+							"        // Если заголовок есть, тест просто проходит (Passed)",
+							"        pm.expect(true).to.be.true;",
+							"    }",
+							"});",
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "DeleteBooking",
+			"item": [
+				{
+					"name": "CleaningBookingById",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Тест подтверждения корректного удаления",
+									"pm.test(\"📝 Сервер подтвердил удаление записью 'Created'\", function () {",
+									"    pm.expect(pm.response.text()).to.include(\"Created\");",
+									"});",
+									"",
+									"",
+									"if (pm.response.code === 405) {",
+									"    //Если ресурса нет, запустится тест информационный",
+									"    pm.test(\"🔍 Ресурс уже удален или недоступен\", function () {",
+									"        pm.expect(pm.response.text()).to.include(\"Method Not Allowed\");",
+									"    });",
+									"}",
+									"",
+									"",
+									"const bookingId = pm.variables.get(\"last_booking_id\");",
+									"",
+									"// Если удаление прошло успешно (201), проверяем доступность через GET",
+									"if (pm.response.code === 201) {",
+									"    pm.sendRequest(`https://restful-booker.herokuapp.com/booking/{bookingId}`, (err, res) => {",
+									"        pm.test(\"🗑️ [Verification] Ресурс действительно удален из базы (404)\", function () {",
+									"            pm.expect(res.code).to.equal(404);",
+									"        });",
+									"    });",
+									"}",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/{{booking_path}}/{{last_booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"{{booking_path}}",
+								"{{last_booking_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							"const cookieVal = pm.request.headers.get(\"Cookie\");",
+							"const authVal = pm.request.headers.get(\"Authorization\");",
+							"",
+							"let detectedAuth = [];",
+							"if (cookieVal) detectedAuth.push(`Cookie (token)`);",
+							"if (authVal) detectedAuth.push(`Authorization (${authVal.split(' ')[0]})`);",
+							"",
+							"// Формируем название теста динамически",
+							"let testStatus = detectedAuth.length > 0 ",
+							"    ? `✅ Использовано: ${detectedAuth.join(\" и \")}` ",
+							"    : \"❌ Заголовки авторизации НЕ НАЙДЕНЫ\";",
+							"",
+							"// Тест проверки авторизации",
+							"pm.test(`🛡️ [Security] ${testStatus}`, function () {",
+							"    const isAuthorized = (cookieVal !== undefined && cookieVal !== \"\") || ",
+							"                         (authVal !== undefined && authVal !== \"\");",
+							"",
+							"    if (!isAuthorized) {",
+							"        const errorDetail = \"Для метода DELETE/PUT/PATCH необходимо передать либо Cookie: token=..., \" + ",
+							"                            \"либо Authorization: Basic .... Без них сервер вернет 403 Forbidden.\";",
+							"        pm.expect.fail(errorDetail);",
+							"    } else {",
+							"        // Если заголовок есть, тест проходит успешно",
+							"        pm.expect(true).to.be.true;",
+							"    }",
+							"});",
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					"pm.test(\"Статус-код успешный (2xx)\", function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+					"});",
+					"",
+					"",
+					"",
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://restful-booker.herokuapp.com"
+		},
+		{
+			"key": "auth_token",
+			"value": ""
+		},
+		{
+			"key": "last_booking_id",
+			"value": ""
+		},
+		{
+			"key": "booking_path",
+			"value": "booking"
+		}
+	]
+}
